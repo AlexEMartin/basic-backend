@@ -1,58 +1,76 @@
-const { request, response } = require('express');
+const { request, response } = require("express");
+const bcryptjs = require("bcryptjs");
+const Usuario = require("../models/usuario");
 
+const usuariosGet = async (req = request, res = response) => {
+  // const { name, age, id = 'NO ID'} = req.query;
+  const { limite = 10, desde = 0 } = req.query;
+  const status = { estado: true };
 
-const usuariosGet = (req = request, res = response) => {
+  const [total, usuarios] = await Promise.all([
+    Usuario.countDocuments(status),
+    Usuario.find(status).skip(Number(desde)).limit(Number(limite)),
+  ]);
 
-    const { name, age, id = 'NO ID'} = req.query;
+  res.json({
+    total,
+    usuarios,
+  });
+};
 
-    res.json({
-        msg: 'get API - controller',
-        name,
-        age, 
-        id
-    })
-}
+const usuariosPost = async (req, res = response) => {
+  const { nombre, correo, password, rol } = req.body;
+  const usuario = new Usuario({ nombre, correo, password, rol });
 
-const usuariosPost = (req, res = response) => {
+  // Encriptar la contraseña
+  const salt = bcryptjs.genSaltSync();
+  usuario.password = bcryptjs.hashSync(password, salt);
 
-    const body = req.body;
+  // Guardar en DB
 
-    res.json({
-        msg: 'post API - controller',
-        body
-    })
-}
+  await usuario.save();
 
-const usuariosPut = (req, res = response) => {
+  res.json({
+    usuario,
+  });
+};
 
-    const { id } = req.params;
+const usuariosPut = async (req, res = response) => {
+  const { id } = req.params;
+  const { _id, password, google, correo, ...resto } = req.body;
 
-    res.json({
-        msg: 'put API - controller',
-        id
-    })
-}
+  if (password) {
+    // Encriptar la contraseña
+    const salt = bcryptjs.genSaltSync();
+    resto.password = bcryptjs.hashSync(password, salt);
+  }
+
+  const usuario = await Usuario.findByIdAndUpdate(id, resto);
+
+  res.json(usuario);
+};
 
 const usuariosPatch = (req, res = response) => {
-    res.json({
-        msg: 'patch API - controller'
-    })
-}
+  res.json({
+    msg: "patch API - controller",
+  });
+};
 
-const usuariosDelete = (req, res = response) => {
-    res.json({
-        msg: 'delete API - controller'
-    })
-}
+const usuariosDelete = async (req, res = response) => {
 
+  const { id } = req.params;
 
+  const usuario = await Usuario.findByIdAndUpdate(id, { estado: false });
 
-
+  res.json({
+    usuario,
+  });
+};
 
 module.exports = {
-    usuariosGet,
-    usuariosPost,
-    usuariosPut,
-    usuariosPatch,
-    usuariosDelete
-}
+  usuariosGet,
+  usuariosPost,
+  usuariosPut,
+  usuariosPatch,
+  usuariosDelete,
+};
